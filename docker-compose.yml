@@ -1,25 +1,16 @@
-# From https://hub.docker.com/_/mariadb
+# Please add .env file with contenty like: POSTGRES_PASSWORD=my-cool-password and do NOT commit them!
 version: '3.1'
 
 services:
   db:
-    image: mariadb
+    image: postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: AxJyoNneG0
-      MYSQL_PASSWORD: HVYAwNtIe9
-      MYSQL_DATABASE: filedupes
-      MYSQL_USER: filedupes_u
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: 0bQvnScNOc
+      POSTGRES_DB: filedupes
+      POSTGRES_USER: filedupes_u
     ports:
-      - '3306:3306'
+      - '127.0.0.1:5432:5432'
     volumes:
-      - ./_mysql_data:/var/lib/mysql
-    # https://stackoverflow.com/questions/1168036/how-to-fix-incorrect-string-value-errors
-    # -> https://github.com/docker-library/mariadb/issues/109
-    command: --character-set-server=utf8
-
-  adminer:
-    image: adminer
-    restart: unless-stopped
-    ports:
-      - 8080:8080
+      - ./_data/postgres:/var/lib/postgresql/data
