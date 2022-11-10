@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS files;
 
 -- Hack by https://stackoverflow.com/questions/5090858/how-do-you-change-the-character-encoding-of-a-postgres-database/5091083#5091083

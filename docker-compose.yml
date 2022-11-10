@@ -3,14 +3,13 @@ version: '3.1'
 
 services:
   db:
-    image: postgres
+    image: docker.io/postgres:15
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_PASSWORD: 0bQvnScNOc
       POSTGRES_DB: filedupes
       POSTGRES_USER: filedupes_u
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
-      - ./_data/postgres:/var/lib/postgresql/data
+      - ./_data/postgres:/var/lib/postgresql/data:Z
