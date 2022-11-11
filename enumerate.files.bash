@@ -2,14 +2,20 @@
 
 : ${1?"Not enough arguments: `basename $0` dir"}
 
+# FIND_ADDON outer env var used for find options. One example is to exclude unwanted files like:
+# sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */_data/postgres ) -prune -o' ./enumerate.files.bash .
+
 DIR="${1}"
 
 psql --help 1>/dev/null || { echo "Problem: [psql] is not installed, or not in the path!"; exit 1; }
 xxhsum --help 2>/dev/null || { echo "Problem: [xxhsum] is not installed, or not in the path!"; exit 2; }
-crc32 || { echo "Problem: [crc32] is not installed, or not in the path!"; exit 3; }
-md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [crc32] is not installed, or not in the path!"; exit 4; }
+#crc32 || { echo "Problem: [crc32] is not installed, or not in the path!"; exit 3; }
+# crc Perl implementation is buggy! See my bugreport https://github.com/redhotpenguin/perl-Archive-Zip/issues/97
+# rhash CRC32 implementation will be used instead (by https://askubuntu.com/questions/303662/how-to-check-crc-of-a-file/1363857#1363857)
+rhash --help 1>/dev/null 2>/dev/null || { echo "Problem: [rhash] is not installed, or not in the path!"; exit 3; }
+md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [md5sum] is not installed, or not in the path!"; exit 4; }
 
-#set -x
+# set -x
 set -eE  # same as: `set -o errexit -o errtrace`
 set -o pipefail
 shopt -s expand_aliases
@@ -18,12 +24,12 @@ shopt -s expand_aliases
 # Access without password assumed! Password must be stored in ~/.pgpass:
 # echo 127.0.0.1:5432:filedupes:filedupes_u:<password> >> ~/.pgpass
 alias sql='psql -qX1n -v ON_ERROR_STOP=1 -U filedupes_u -h 127.0.0.1 --dbname filedupes'
-sql -e < enumerate.sql
+sql < enumerate.sql
 
 THREADS=$[ $( nproc ) - 2 ]
 
 echo 'Calculate amount of files to process:'
-FILES_TOTAL=$( find $DIR -type f | pv -l | wc -l )
+FILES_TOTAL=$( find $DIR ${FIND_ADDON} -type f | pv -l | wc -l )
 echo FILES_TOTAL=$FILES_TOTAL
 
 SQL_INSERT_PATTERN="INSERT INTO files (dir, filename, inode, size, md5, crc32, xxhash) VALUES('%s', '%s', %d, %d, '%s', '%s', '%s')"
@@ -45,12 +51,12 @@ function insertString(){
 time {
 #n=0
 # Handle all file names by http://stackoverflow.com/a/1120952/307525
-find $DIR -type f -print0 | \
+find $DIR ${FIND_ADDON} -type f -print0 | \
 	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {remaining %e} {finish at %I} {%r (avg: %a)}" | \
 	while IFS= read -r -d $'\0' F; do
 #		[ $((n++%1000)) -eq 0 ] && echo $n
 		{
-			echo $( insertString "$( dirname "$F" )" "$( basename "$F" )" $( stat --format=%i "$F" ) $( stat --format=%s "$F" ) "$( md5sum < "$F" | cut -d' ' -f1 )" "$( crc32 "$F" )" "$( xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" ) | sql #"
+			echo $( insertString "$( dirname "$F" )" "$( basename "$F" )" $( stat --format=%i "$F" ) $( stat --format=%s "$F" ) "$( md5sum < "$F" | cut -d' ' -f1 )" "$( rhash --printf=%c --crc32 "$F" )" "$( xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" ) | sql #"
 		} &
 
 		# At most as number of cores (http://stackoverflow.com/a/16594627/307525)
