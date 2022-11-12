@@ -1,0 +1,8 @@
+#!/bin/bash
+
+psql --help 1>/dev/null || { echo "Problem: [psql] is not installed, or not in the path!"; exit 1; }
+
+### Init table
+# Access without password assumed! Password must be stored in ~/.pgpass:
+# echo 127.0.0.1:5432:filedupes:filedupes_u:<password> >> ~/.pgpass
+alias sql='psql -qX1n -v ON_ERROR_STOP=1 -U filedupes_u -h 127.0.0.1 --dbname filedupes'

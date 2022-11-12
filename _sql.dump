@@ -1,0 +1,9 @@
+#!/bin/bash
+
+: "${DIR_RES:=_data/$(date --iso-8601=s)}"
+
+### Init table
+# Access without password assumed! Password must be stored in ~/.pgpass:
+# echo 127.0.0.1:5432:filedupes:filedupes_u:<password> >> ~/.pgpass
+podman exec -it hashingdb_db_1 pg_dump -U filedupes_u -h 127.0.0.1 --dbname filedupes | dos2unix > "${DIR_RES}/filedupes.dump.sql"
+

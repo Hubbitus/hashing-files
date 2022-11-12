@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+
+#export DIR=/mnt/data
+: "${DIR:=/mnt/data}"
+export DIR
+export DIR_RES=_data/@results/$(date --iso-8601=s)
+mkdir -p -m=0777 "${DIR_RES}"
+
+time {
+echo "1) ### Create tree"
+time sudo -u backup tree -ax --du --dirsfirst -DFhv "${DIR}" | tee "${DIR_RES}/tree"
+echo "2) ### Calculate DiskUsage"
+time sudo -u backup du --total -hLlsx "${DIR}" | tee "${DIR_RES}/du"
+echo "3) ### Enumerate hash files into DB"
+time sudo -u backup --preserve-env=DIR,DIR_RES FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */hashing.files/_data/postgres ) -prune -o' ./enumerate.files.bash "${DIR}" ; echo $?
+echo "4) ### Dumping content of DB"
+time ./_sql.dump
+} 2>&1 | tee "${DIR_RES}/full.log"

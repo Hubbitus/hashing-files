@@ -1,7 +1,0 @@
-#!/usr/bin/bash
-
-set -e
-
-time fdupes --noempty -r --symlinks --hardlinks --size --time --summarize /mnt/data/ | tee fdupes.log
-
-echo DONE
