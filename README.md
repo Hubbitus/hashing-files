@@ -19,7 +19,7 @@ First set password for the container and write it into `.pgpass`:
 ```bash
 echo "POSTGRES_PASSWORD={my_cool_pass}" > .env
 source .env
-echo "127.0.0.1:5432:filedupes:filedupes_u:${"POSTGRES_PASSWORD}" >> ~/.pgpass
+echo "127.0.0.1:5432:filedupes:filedupes_u:${POSTGRES_PASSWORD}" >> ~/.pgpass
 ```
 
 And then just run the postgres container:
