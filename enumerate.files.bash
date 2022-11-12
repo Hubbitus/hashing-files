@@ -6,8 +6,9 @@
 # sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */_data/postgres ) -prune -o' ./enumerate.files.bash .
 
 DIR="${1}"
+: "${DIR_RES:=_data/$(date --iso-8601=s)}"
+mkdir -p "${DIR_RES}"
 
-psql --help 1>/dev/null || { echo "Problem: [psql] is not installed, or not in the path!"; exit 1; }
 xxhsum --help 2>/dev/null || { echo "Problem: [xxhsum] is not installed, or not in the path!"; exit 2; }
 #crc32 || { echo "Problem: [crc32] is not installed, or not in the path!"; exit 3; }
 # crc Perl implementation is buggy! See my bugreport https://github.com/redhotpenguin/perl-Archive-Zip/issues/97
@@ -15,18 +16,15 @@ xxhsum --help 2>/dev/null || { echo "Problem: [xxhsum] is not installed, or not 
 rhash --help 1>/dev/null 2>/dev/null || { echo "Problem: [rhash] is not installed, or not in the path!"; exit 3; }
 md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [md5sum] is not installed, or not in the path!"; exit 4; }
 
-# set -x
+set -x
 set -eE  # same as: `set -o errexit -o errtrace`
 set -o pipefail
 shopt -s expand_aliases
 
-### Init table
-# Access without password assumed! Password must be stored in ~/.pgpass:
-# echo 127.0.0.1:5432:filedupes:filedupes_u:<password> >> ~/.pgpass
-alias sql='psql -qX1n -v ON_ERROR_STOP=1 -U filedupes_u -h 127.0.0.1 --dbname filedupes'
-sql < enumerate.sql
+source _sql
+sql < sql/enumerate-db.sql
 
-THREADS=$[ $( nproc ) - 2 ]
+THREADS=$[ $( nproc ) - 1 ]
 
 echo 'Calculate amount of files to process:'
 FILES_TOTAL=$( find $DIR ${FIND_ADDON} -type f | pv -l | wc -l )
@@ -45,7 +43,7 @@ err_report() {
 trap 'err_report $LINENO $?' ERR
 
 function insertString(){
-	printf "$SQL_INSERT_PATTERN" "${1//\'/''}" "${2//\'/''}" "$3" "$4" "$5" "$6" "$7"
+	printf "$SQL_INSERT_PATTERN" "${1//\'/\'\'}" "${2//\'/\'\'}" "$3" "$4" "$5" "$6" "$7"
 }
 
 time {
@@ -59,10 +57,13 @@ find $DIR ${FIND_ADDON} -type f -print0 | \
 			echo $( insertString "$( dirname "$F" )" "$( basename "$F" )" $( stat --format=%i "$F" ) $( stat --format=%s "$F" ) "$( md5sum < "$F" | cut -d' ' -f1 )" "$( rhash --printf=%c --crc32 "$F" )" "$( xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" ) | sql #"
 		} &
 
-		# At most as number of cores (http://stackoverflow.com/a/16594627/307525)
+		# Configured parallelism (see http://stackoverflow.com/a/16594627/307525)
 		[ $( jobs | wc -l ) -ge $THREADS ] && wait || true
 	done
 wait
-} 2>&1 | tee process.log
+
+echo 'Create DB indexes:'
+sql < sql/enumerate-db.indexes.sql
+} 2>&1 | tee "${DIR_RES}/enumerate-files.log"
 
 echo 'DONE'
