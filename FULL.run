@@ -10,7 +10,7 @@ time {
 echo "1) ### Create tree"
 time sudo -u backup tree -ax --du --dirsfirst -DFhv "${DIR}" | tee "${DIR_RES}/tree"
 echo "2) ### Calculate DiskUsage"
-time sudo -u backup du --total -hLlsx "${DIR}" | tee "${DIR_RES}/du"
+time sudo -u backup du --total -hLsx "${DIR}" | tee "${DIR_RES}/du"
 echo "3) ### Enumerate hash files into DB"
 time sudo -u backup --preserve-env=DIR,DIR_RES FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */hashing.files/_data/postgres ) -prune -o' ./enumerate.files.bash "${DIR}" ; echo $?
 echo "4) ### Dumping content of DB"

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# File should be sourced, not runned!
+
 psql --help 1>/dev/null || { echo "Problem: [psql] is not installed, or not in the path!"; exit 1; }
 
 ### Init table
