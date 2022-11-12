@@ -27,10 +27,10 @@ sql < sql/enumerate-db.sql
 THREADS=$[ $( nproc ) - 1 ]
 
 echo 'Calculate amount of files to process:'
-FILES_TOTAL=$( find $DIR ${FIND_ADDON} -type f | pv -l | wc -l )
+FILES_TOTAL=$( find $DIR ${FIND_ADDON} -not -type d | pv -l | wc -l )
 echo FILES_TOTAL=$FILES_TOTAL
 
-SQL_INSERT_PATTERN="INSERT INTO files (dir, filename, inode, size, md5, crc32, xxhash) VALUES('%s', '%s', %d, %d, '%s', '%s', '%s')"
+SQL_INSERT_PATTERN="INSERT INTO files (dir, filename, inode, size, md5, crc32, xxhash, type, link_to, link_to_canonic, link_to_type) VALUES('%s', '%s', %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')"
 
 # https://unix.stackexchange.com/questions/39623/trap-err-and-echoing-the-error-line
 err_report() {
@@ -43,19 +43,32 @@ err_report() {
 trap 'err_report $LINENO $?' ERR
 
 function insertString(){
-	printf "$SQL_INSERT_PATTERN" "${1//\'/\'\'}" "${2//\'/\'\'}" "$3" "$4" "$5" "$6" "$7"
+	printf "$SQL_INSERT_PATTERN" "${1//\'/\'\'}" "${2//\'/\'\'}" "$3" "$4" "$5" "$6" "$7" "$8" "${9//\'/\'\'}" "${10//\'/\'\'}" "${11//\'/\'\'}"
 }
 
 time {
 #n=0
 # Handle all file names by http://stackoverflow.com/a/1120952/307525
-find $DIR ${FIND_ADDON} -type f -print0 | \
-	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {remaining %e} {finish at %I} {%r (avg: %a)}" | \
+find $DIR ${FIND_ADDON} -not -type d -print0 | \
+	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {⏳ %e} {✔ ~%I} {%r (avg: %a)}" | \
 	while IFS= read -r -d $'\0' F; do
-#		[ $((n++%1000)) -eq 0 ] && echo $n
 		{
-			echo $( insertString "$( dirname "$F" )" "$( basename "$F" )" $( stat --format=%i "$F" ) $( stat --format=%s "$F" ) "$( md5sum < "$F" | cut -d' ' -f1 )" "$( rhash --printf=%c --crc32 "$F" )" "$( xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" ) | sql #"
-		} &
+			link_target="$(readlink -n --canonicalize "$F" || :)" # Handle broken links
+			echo $( insertString \
+				"$( dirname "$F" )" \
+				"$( basename "$F" )" \
+				$( stat --format=%i "$F" ) \
+				$( stat --format=%s "$F" ) \
+				"$( [ -e "$link_target" ] && md5sum < "$F" | cut -d' ' -f1 )" \
+				"$( [ -e "$link_target" ] && rhash --printf=%c --crc32 "$F" )" \
+				"$( [ -e "$link_target" ] && xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" \
+				"$( [ -e "$link_target" ] && stat --format=%F "$F" )" \
+				"$( readlink -n "$F" || : )" \
+				"${link_target}" \
+				"$( [ -e "$link_target" ] && stat --format=%F "${link_target}" 2>/dev/null )" \
+				) | sql
+		}
+		# & # "
 
 		# Configured parallelism (see http://stackoverflow.com/a/16594627/307525)
 		[ $( jobs | wc -l ) -ge $THREADS ] && wait || true

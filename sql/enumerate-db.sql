@@ -12,7 +12,14 @@ CREATE TABLE files(
 	size BIGINT NOT NULL,
 	md5 CHAR(32) NOT NULL,
 	crc32 CHAR(8) NOT NULL,
-	xxhash CHAR(16) NOT NULL
+	xxhash CHAR(16) NOT NULL,
+	type text,
+	for_del boolean NOT NULL DEFAULT false,
+	for_del_dir boolean NOT NULL DEFAULT false,
+	link_to text,
+	link_to_canonic text,
+	link_to_type text,
+		PRIMARY KEY(dir, filename)
 );
 
 -- By https://stackoverflow.com/questions/25287639/how-to-identify-if-a-value-in-column-can-be-encoded-to-latin-in-postgres
