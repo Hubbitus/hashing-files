@@ -16,7 +16,7 @@ xxhsum --help 2>/dev/null || { echo "Problem: [xxhsum] is not installed, or not 
 rhash --help 1>/dev/null 2>/dev/null || { echo "Problem: [rhash] is not installed, or not in the path!"; exit 3; }
 md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [md5sum] is not installed, or not in the path!"; exit 4; }
 
-set -x
+#set -x
 set -eE  # same as: `set -o errexit -o errtrace`
 set -o pipefail
 shopt -s expand_aliases
