@@ -19,6 +19,7 @@ CREATE TABLE files(
 	link_to text,
 	link_to_canonic text,
 	link_to_type text,
+	link_broken boolean GENERATED ALWAYS AS ('symbolic link' = type AND '' = link_to_type) STORED,
 		PRIMARY KEY(dir, filename)
 );
 

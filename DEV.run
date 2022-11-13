@@ -5,7 +5,7 @@
 #sudo -u backup FIND_ADDON='-not -path */BACKUP.mirror.store.ROOT/* -not -path */hashing.db/_data/postgres/*' ./enumerate.files.bash /mnt/data ; echo $?
 
 #sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */_data/postgres ) -prune -o' ./enumerate.files.bash . ; echo $?
-sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */_data/postgres ) -prune -o' ./enumerate.files.bash __tmp ; echo $?
+sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */_data/postgres ) -prune -o' ./enumerate.files.bash test.dir ; echo $?
 
 #sudo -u backup FIND_ADDON='( -path */BACKUP.mirror.store.ROOT/* -o -path */hashing.files/_data/postgres ) -prune -o' ./enumerate.files.bash /mnt/data ; echo $?
 

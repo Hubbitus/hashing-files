@@ -17,7 +17,7 @@ rhash --help 1>/dev/null 2>/dev/null || { echo "Problem: [rhash] is not installe
 md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [md5sum] is not installed, or not in the path!"; exit 4; }
 
 #set -x
-set -eE  # same as: `set -o errexit -o errtrace`
+set -eE # same as: `set -o errexit -o errtrace`
 set -o pipefail
 shopt -s expand_aliases
 
@@ -50,7 +50,7 @@ time {
 #n=0
 # Handle all file names by http://stackoverflow.com/a/1120952/307525
 find $DIR ${FIND_ADDON} -not -type d -print0 | \
-	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {⏳ %e} {✔ ~%I} {%r (avg: %a)}" | \
+	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {⏳~ %e} {✔~ %I} {%r (avg: %a)}" | \
 	while IFS= read -r -d $'\0' F; do
 		{
 			link_target="$(readlink -n --canonicalize "$F" || :)" # Handle broken links
@@ -59,10 +59,10 @@ find $DIR ${FIND_ADDON} -not -type d -print0 | \
 				"$( basename "$F" )" \
 				$( stat --format=%i "$F" ) \
 				$( stat --format=%s "$F" ) \
-				"$( [ -e "$link_target" ] && md5sum < "$F" | cut -d' ' -f1 )" \
-				"$( [ -e "$link_target" ] && rhash --printf=%c --crc32 "$F" )" \
-				"$( [ -e "$link_target" ] && xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" \
-				"$( [ -e "$link_target" ] && stat --format=%F "$F" )" \
+				"$( [ -f "$link_target" ] && md5sum < "$F" | cut -d' ' -f1 )" \
+				"$( [ -f "$link_target" ] && rhash --printf=%c --crc32 "$F" )" \
+				"$( [ -f "$link_target" ] && xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" \
+				"$( stat --format=%F "$F" )" \
 				"$( readlink -n "$F" || : )" \
 				"${link_target}" \
 				"$( [ -e "$link_target" ] && stat --format=%F "${link_target}" 2>/dev/null )" \
