@@ -24,7 +24,8 @@ shopt -s expand_aliases
 source _sql
 sql < sql/enumerate-db.sql
 
-THREADS=$[ $( nproc ) - 1 ]
+# -1 may be usefull to make system more responcive for other tasks
+THREADS=$[ $( nproc ) - 0 ]
 
 echo 'Calculate amount of files to process:'
 FILES_TOTAL=$( find $DIR ${FIND_ADDON} -not -type d | pv -l | wc -l )
@@ -67,8 +68,7 @@ find $DIR ${FIND_ADDON} -not -type d -print0 | \
 				"${link_target}" \
 				"$( [ -e "$link_target" ] && stat --format=%F "${link_target}" 2>/dev/null )" \
 				) | sql
-		}
-		# & # "
+		} &
 
 		# Configured parallelism (see http://stackoverflow.com/a/16594627/307525)
 		[ $( jobs | wc -l ) -ge $THREADS ] && wait || true

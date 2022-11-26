@@ -1,6 +1,7 @@
 SELECT *
 FROM files
 
+
 SELECT
 	inode, COUNT(*)
 	, array_agg(dir || '/' || filename) as files
@@ -34,6 +35,7 @@ WITH md5 as (
 		,array_agg(dir || '/' || filename) as files
 		,array_agg(DISTINCT crc32) as crc32s
 		,array_agg(DISTINCT xxhash) as xxhashs
+		,array_agg("size") as sizes
 	FROM files
 	WHERE size > 0
 	GROUP BY md5
@@ -46,6 +48,7 @@ WITH md5 as (
 		,array_agg(dir || '/' || filename) as files
 		,array_agg(DISTINCT md5) as md5s
 		,array_agg(DISTINCT xxhash) as xxhashs
+		,array_agg("size") as sizes
 	FROM files
 	WHERE size > 0
 	GROUP BY crc32
@@ -58,6 +61,7 @@ WITH md5 as (
 		,array_agg(dir || '/' || filename) as files
 		,array_agg(DISTINCT crc32) as crc32s
 		,array_agg(DISTINCT md5) as md5s
+		,array_agg("size") as sizes
 	FROM files
 	WHERE size > 0
 	GROUP BY xxhash
@@ -73,15 +77,15 @@ WITH md5 as (
 -- ---------+-----------+------------+
 --    424806|     424782|      424806|
 -- Look at collisions deeper:
-SELECT 'md5' as hash_type, hash, files, null as md5s, crc32s, xxhashs
+SELECT 'md5' as hash_type, hash, files, ARRAY[hash] as md5s, crc32s, xxhashs, sizes
 FROM md5
 WHERE cardinality(crc32s) > 1 OR cardinality(xxhashs) > 1
 UNION ALL
-SELECT 'crc32' as hash_type, hash, files, md5s, null as crc32s, xxhashs
+SELECT 'crc32' as hash_type, hash, files, md5s, ARRAY[hash] as crc32s, xxhashs, sizes
 FROM crc32
 WHERE cardinality(md5s) > 1 OR cardinality(xxhashs) > 1
 UNION ALL
-SELECT 'xxhash' as hash_type, hash, files, md5s, crc32s, null as xxhashs
+SELECT 'xxhash' as hash_type, hash, files, md5s, crc32s, ARRAY[hash] as xxhashs, sizes
 FROM xxhash
 WHERE cardinality(crc32s) > 1 OR cardinality(md5s) > 1
 
