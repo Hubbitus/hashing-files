@@ -11,7 +11,6 @@ CREATE TABLE files(
 	inode BIGINT NOT NULL,
 	size BIGINT NOT NULL,
 	md5 CHAR(32) NOT NULL,
-	crc32 CHAR(8) NOT NULL,
 	xxhash CHAR(16) NOT NULL,
 	type text,
 	for_del boolean NOT NULL DEFAULT false,

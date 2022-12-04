@@ -10,10 +10,6 @@ DIR="${1}"
 mkdir -p "${DIR_RES}"
 
 xxhsum --help 2>/dev/null || { echo "Problem: [xxhsum] is not installed, or not in the path!"; exit 2; }
-#crc32 || { echo "Problem: [crc32] is not installed, or not in the path!"; exit 3; }
-# crc Perl implementation is buggy! See my bugreport https://github.com/redhotpenguin/perl-Archive-Zip/issues/97
-# rhash CRC32 implementation will be used instead (by https://askubuntu.com/questions/303662/how-to-check-crc-of-a-file/1363857#1363857)
-rhash --help 1>/dev/null 2>/dev/null || { echo "Problem: [rhash] is not installed, or not in the path!"; exit 3; }
 md5sum --help 1>/dev/null 2>/dev/null || { echo "Problem: [md5sum] is not installed, or not in the path!"; exit 4; }
 
 #set -x
@@ -31,7 +27,7 @@ echo 'Calculate amount of files to process:'
 FILES_TOTAL=$( find $DIR ${FIND_ADDON} -not -type d | pv -l | wc -l )
 echo FILES_TOTAL=$FILES_TOTAL
 
-SQL_INSERT_PATTERN="INSERT INTO files (dir, filename, inode, size, md5, crc32, xxhash, type, link_to, link_to_canonic, link_to_type) VALUES('%s', '%s', %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')"
+SQL_INSERT_PATTERN="INSERT INTO files (dir, filename, inode, size, md5, xxhash, type, link_to, link_to_canonic, link_to_type) VALUES('%s', '%s', %d, %d, '%s', '%s', '%s', '%s', '%s', '%s')"
 
 # https://unix.stackexchange.com/questions/39623/trap-err-and-echoing-the-error-line
 err_report() {
@@ -44,14 +40,14 @@ err_report() {
 trap 'err_report $LINENO $?' ERR
 
 function insertString(){
-	printf "$SQL_INSERT_PATTERN" "${1//\'/\'\'}" "${2//\'/\'\'}" "$3" "$4" "$5" "$6" "$7" "$8" "${9//\'/\'\'}" "${10//\'/\'\'}" "${11//\'/\'\'}"
+	printf "$SQL_INSERT_PATTERN" "${1//\'/\'\'}" "${2//\'/\'\'}" "$3" "$4" "$5" "$6" "$7" "${8//\'/\'\'}" "${9//\'/\'\'}" "${10//\'/\'\'}"
 }
 
 time {
 #n=0
 # Handle all file names by http://stackoverflow.com/a/1120952/307525
 find $DIR ${FIND_ADDON} -not -type d -print0 | \
-	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {⏳~ %e} {✔~ %I} {%r (avg: %a)}" | \
+	pv -0 -s $FILES_TOTAL -f -w 150 --format="%b/$FILES_TOTAL {%t} %p {⏳~ %e} {🏁~ %I} {%r (avg: %a)}" | \
 	while IFS= read -r -d $'\0' F; do
 		{
 			link_target="$(readlink -n --canonicalize "$F" || :)" # Handle broken links
@@ -61,7 +57,6 @@ find $DIR ${FIND_ADDON} -not -type d -print0 | \
 				$( stat --format=%i "$F" ) \
 				$( stat --format=%s "$F" ) \
 				"$( [ -f "$link_target" ] && md5sum < "$F" | cut -d' ' -f1 )" \
-				"$( [ -f "$link_target" ] && rhash --printf=%c --crc32 "$F" )" \
 				"$( [ -f "$link_target" ] && xxhsum -H1 < "$F" 2>/dev/null | cut -d' ' -f1 )" \
 				"$( stat --format=%F "$F" )" \
 				"$( readlink -n "$F" || : )" \
